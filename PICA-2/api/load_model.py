@@ -2,14 +2,9 @@ from google.cloud import storage
 import zipfile
 import os
 
-client = storage.Client()
-bucket = client.bucket("model_checkpoints")
-#blob = bucket.blob("apple")
-#blob.download_to_filename(blob.name)
-
 #blobs = client.list_blobs("model_checkpoints")
 #for blob in blobs:
-#    print(blob.name)
+#print(blob.name)
 
 
 def extract_to(parent_blob):
@@ -23,10 +18,17 @@ def extract_to(parent_blob):
             #all subsequent folders with files belonging to each category
             zip_ref.extractall()
         print("Success!")
-        
-with zipfile.ZipFile("apple",
+
+if __name__ == '__main__':
+    client = storage.Client()
+    bucket = client.bucket("model_checkpoints")
+    blob = bucket.blob("apple")
+    blob.download_to_filename(blob.name)
+
+    with zipfile.ZipFile("apple",
                     'r') as zip_ref:
             #we do not define an extraction directory since the zipped files already contain
             #the directories, since there was a large folder containing
             #all subsequent folders with files belonging to each category
             zip_ref.extractall()
+    os.remove("apple")
