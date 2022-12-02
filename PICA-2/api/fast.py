@@ -155,6 +155,8 @@ async def get_super(alpha: str ,
         return {"Error": "Invalid Category"}
 
     initial_image = generate_image(alpha , noise_dim , num_examples)
+    add_image_alpha = generate_image(alpha, noise_dim , num_examples)
+    add_image_beta = generate_image(beta, noise_dim , num_examples)
 
     #success, encoded_image = cv2.imencode('.png', gans[0,:,:,0])
     #if success:g
@@ -164,24 +166,28 @@ async def get_super(alpha: str ,
     a_pred = discriminate_image(alpha, initial_image)
     b_pred = discriminate_image(beta, initial_image)
 
-    alpha_fakeness = -25
-    beta_fakeness = -50
-    strength=0.1
+    alpha_fakeness = -7
+    beta_fakeness = -7
+    strength=0.001
 
     condition = (a_pred > alpha_fakeness and b_pred > beta_fakeness)
     max_iter = 1000
     iter = 0
 
-    # Compare to thresholds and update
+    # Our Input
     while condition == False:
-        if a_pred <= alpha_fakeness:
-            new_im = generate_image(alpha)
-            initial_image = image_numpy_mixer(initial_image, new_im, strength)
+        if a_pred >= alpha_fakeness:
+            initial_image = image_numpy_mixer(initial_image, add_image_alpha, strength)
+            a_pred = discriminate_image(alpha, initial_image)
+            b_pred = discriminate_image(beta, initial_image)
+            condition = (a_pred < alpha_fakeness and b_pred < beta_fakeness)
             iter += 1
 
-        if b_pred <= beta_fakeness:
-            new_im = generate_image(beta)
-            initial_image = image_numpy_mixer(initial_image, new_im, strength)
+        if b_pred >= beta_fakeness:
+            initial_image = image_numpy_mixer(initial_image, add_image_beta, strength)
+            a_pred = discriminate_image(alpha, initial_image)
+            b_pred = discriminate_image(beta, initial_image)
+            condition = (a_pred < alpha_fakeness and b_pred < beta_fakeness)
             iter += 1
 
         if condition == True:
@@ -202,3 +208,27 @@ async def get_super(alpha: str ,
     bytes_image = io.BytesIO()
     image.save(bytes_image, format='PNG')
     return Response(content=bytes_image.getvalue(), media_type="image/png")
+
+
+
+
+#Nicols Original While Function just in case
+
+"""
+    while condition == False:
+        if a_pred <= alpha_fakeness:
+            new_im = generate_image(alpha)
+            initial_image = image_numpy_mixer(initial_image, new_im, strength)
+            iter += 1
+
+        if b_pred <= beta_fakeness:
+            new_im = generate_image(beta)
+            initial_image = image_numpy_mixer(initial_image, new_im, strength)
+            iter += 1
+
+        if condition == True:
+            break
+
+        if iter == max_iter:
+            break
+"""
