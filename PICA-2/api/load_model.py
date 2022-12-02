@@ -4,7 +4,7 @@ import os
 
 
 
-names = ["house","apple"]
+names = ["house","apple","squirrel","mountain","door","cloud"]
 
 central_dir = "central_models"
 if not os.path.isdir(central_dir):
