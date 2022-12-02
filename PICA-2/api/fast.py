@@ -120,8 +120,8 @@ def image_numpy_mixer(img1, img2, strength):
 
     #Mixer of numpy
     new_img = (np_frame_1*(1-strength)+(np_frame_2*strength))
-    return new_img
 
+    return new_img
 
 def generate_image(category : str, noise_dim: int = 100,num_examples: int = 1):
     seed = normal([num_examples, noise_dim])
@@ -162,19 +162,20 @@ async def get_super(alpha: str ,
     #if success:g
     #    image = encoded_image.tobytes()
 
+     #Parameters
+    alpha_fakeness = -7
+    beta_fakeness = -7
+    strength = 0.1
+
     # Compare the Supercookie image to both discriminants
     a_pred = discriminate_image(alpha, initial_image)
     b_pred = discriminate_image(beta, initial_image)
 
-    alpha_fakeness = -7
-    beta_fakeness = -7
-    strength=0.001
-
-    condition = (a_pred > alpha_fakeness and b_pred > beta_fakeness)
-    max_iter = 1000
+    condition = (a_pred < alpha_fakeness and b_pred < beta_fakeness)
+    max_iter = 500
     iter = 0
 
-    # Our Input
+    # Compare to thresholds and update
     while condition == False:
         if a_pred >= alpha_fakeness:
             initial_image = image_numpy_mixer(initial_image, add_image_alpha, strength)
@@ -193,24 +194,24 @@ async def get_super(alpha: str ,
         if condition == True:
             break
 
-        if iter == max_iter:
+
             break
+
 
     # Add color to the background
     #initial_image = color_under_image(color, initial_image)
+    resized_img = (cv2.resize(initial_image, (28, 28), interpolation=cv2.INTER_AREA)*127.5+127.5).astype(np.uint16)
+    #image = Image.fromarray(resized_img)
 
-    image = Image.fromarray(
-        (cv2.resize(initial_image, (28, 28), interpolation=cv2.INTER_AREA) *
-         255).astype(np.uint8))
+
     #success, encoded_image = cv2.imencode('.png', gans[0,:,:,0])
     #if success:g
     #    image = encoded_image.tobytes()
-    bytes_image = io.BytesIO()
-    image.save(bytes_image, format='PNG')
-    return Response(content=bytes_image.getvalue(), media_type="image/png")
-
-
-
+    #bytes_image = io.BytesIO()
+    #image.save(bytes_image, format='PNG')
+    #return Response(content=bytes_image.getvalue(), media_type="image/png")
+    im = cv2.imencode('.png', resized_img)[1]
+    return Response(content=im.tobytes(), media_type="image/png")
 
 #Nicols Original While Function just in case
 
