@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response , File , UploadFile
+from fastapi import FastAPI, Response , File , UploadFile , Request
 from http import HTTPStatus
 import numpy as np
 from tensorflow.train import latest_checkpoint , Checkpoint
@@ -11,11 +11,21 @@ import io
 from dataclasses import dataclass , field
 import logging
 from PIL import Image
+from scipy.ndimage.filters import gaussian_filter
+import matplotlib.pyplot as plt
+from datetime import date
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter , _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+
 
 ###API TITEL
 app = FastAPI(title = "PICA2 AMAZING GANs")
+limiter = Limiter(key_func = get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded , _rate_limit_exceeded_handler)
 
-@dataclass(slots=True)
+@dataclass
 class GanConfig:
 
     category : str
@@ -45,7 +55,7 @@ def load_checkpoint(category : str):
 
 @app.on_event("startup")
 async def startup_event():
-    app.state.categories = ["house","apple","mountain","squirrel","door","cloud"]
+    app.state.categories = ["house","apple","mountain","squirrel","door","cloud", "butterfly"]
     app.state.checkpoints = dict()
     for cat in app.state.categories:
         app.state.checkpoints.update({cat : load_checkpoint(cat)})
@@ -85,7 +95,8 @@ async def get_ganification(category : str = "apple" , noise_dim : int = 100 , nu
     return Response(content = bytes_image.getvalue() , media_type="image/png")
 
 @app.post("/discriminate")
-async def get_discriminated(image : UploadFile , category : str = "apple"):
+@limiter.limit("5/10seconds")
+async def get_discriminated(request : Request , image : UploadFile , category : str = "apple"):
     if category not in app.state.checkpoints.keys():
         return {"Error": "Invalid Category"}
 
@@ -109,18 +120,61 @@ async def get_discriminated(image : UploadFile , category : str = "apple"):
 
 #####
 
+def resize_and_colour(img, cmap):
+    image = cv2.resize(img, [448,448], interpolation=cv2.INTER_CUBIC)
+    fig = plt.imshow(image, cmap=cmap)
+    plt.axis('off')
+    plt.savefig('one.png', bbox_inches = 'tight')
+    image = plt.imread('one.png')
+    return image
+
+def signature(image,cmap,name, x=400,x1=0,y=450,y1=450):
+    today = date.today()
+    user_input = name
+    plt.xticks([])
+    plt.yticks([])
+    plt.box(False)
+    plt.scatter(x,y,clip_on=False,color="white",alpha=0.00001)
+    plt.scatter(x1,y1,clip_on=False,color="white",alpha=0.00001)
+    plt.text(x,y,user_input)
+    plt.text(x1,y1,today)
+    plt.imshow(image,cmap=cmap)
+    plt.axis('off')
+    plt.savefig('two.png', bbox_inches = 'tight')
+    image = plt.imread('two.png')
+    return image
+
+def resize_color_signed(img,cmap,name, x=400,x1=0,y=450,y1=450):
+    image = cv2.resize(img, [448,448], interpolation=cv2.INTER_CUBIC)
+    today = date.today()
+    plt.scatter(x,y,clip_on=False,color="white",alpha=0.00001)
+    plt.scatter(x1,y1,clip_on=False,color="white",alpha=0.00001)
+    plt.text(x,y,name)
+    plt.text(x1,y1,today)
+    plt.imshow(image,cmap=cmap)
+    plt.axis('off')
+    plt.savefig('one.png', bbox_inches = 'tight')
+    image = plt.imread('one.png')
+    return image
+
+
+def blurr_image(img1):
+    #takes in image array, gives out image array that is blurred
+    flattened_image = img1.reshape(784,1)
+    blurred = gaussian_filter(flattened_image,sigma=7)
+    output = blurred.reshape(28,28,1)
+    return output
+
+
 def image_numpy_mixer(img1, img2, strength):
     #First image conversion
     np_frame_1 = np.array(img1)
     np_frame_1 = np_frame_1.reshape(28,28,1)
-
     #Second image conversion
     np_frame_2 = np.array(img2)
     np_frame_2 = np_frame_2.reshape(28,28,1)
-
     #Mixer of numpy
     new_img = (np_frame_1*(1-strength)+(np_frame_2*strength))
-
     return new_img
 
 def generate_image(category : str, noise_dim: int = 100,num_examples: int = 1):
@@ -130,7 +184,6 @@ def generate_image(category : str, noise_dim: int = 100,num_examples: int = 1):
 
 def discriminate_image(category : str , img : np.ndarray) -> np.ndarray:
     img_arr = np.array(img, dtype=np.uint8)
-
     #nparr = np.fromstring( await image.read() , dtype = np.uint8)
     #nparr = cv2.imdecode(nparr , cv2.IMREAD_COLOR)[1]
     try:
@@ -145,9 +198,12 @@ def discriminate_image(category : str , img : np.ndarray) -> np.ndarray:
     return prediction
 
 @app.post("/super" , response_class = Response)
-async def get_super(alpha: str ,
+@limiter.limit("5/minute")
+async def get_super(request : Request ,
+                    alpha: str ,
                     beta : str,
                     color : str ,
+                    name : str, #I added this I hope that's cool
                     noise_dim: int = 100,
                     num_examples: int = 1):
     # Generate and save a random image as Supercookie
@@ -194,42 +250,47 @@ async def get_super(alpha: str ,
         if condition == True:
             break
 
+    print(type(initial_image))
+    print(initial_image.shape)
 
-            break
+    #scale and colour: array to array
+    #initial_image = resize_and_colour(initial_image, cmap=color)
+    #add name and date: array to array
+    #initial_image = signature(initial_image,cmap=color,name=name, x=400,x1=0,y=450,y1=450)
+
+    #New scale,color,sign
+    initial_image = resize_color_signed(initial_image,cmap=color,name=name, x=400,x1=5,y=440,y1=440)
+
+    #Return and display
+    resized_img = (initial_image*127.5+127.5).astype(np.uint16)
+
+    #resized_img = (cv2.resize(initial_image, (28, 28), interpolation=cv2.INTER_AREA)*127.5+127.5).astype(np.uint16)
+    im = cv2.imencode('.png', resized_img)[1] #OG
+
+    return Response(content=im.tobytes(), media_type="image/png") #OG
 
 
-    # Add color to the background
-    #initial_image = color_under_image(color, initial_image)
-    resized_img = (cv2.resize(initial_image, (28, 28), interpolation=cv2.INTER_AREA)*127.5+127.5).astype(np.uint16)
-    #image = Image.fromarray(resized_img)
 
 
-    #success, encoded_image = cv2.imencode('.png', gans[0,:,:,0])
-    #if success:g
-    #    image = encoded_image.tobytes()
-    #bytes_image = io.BytesIO()
+
+
+
+
+
+
+
+
+
+    #initial_image = (initial_image*127.5+127.5).astype(np.uint16)
+    #im = cv2.imencode('.png', initial_image)[1]
+    #return Response(content=im.tobytes(), media_type="image/png")
     #image.save(bytes_image, format='PNG')
     #return Response(content=bytes_image.getvalue(), media_type="image/png")
-    im = cv2.imencode('.png', resized_img)[1]
-    return Response(content=im.tobytes(), media_type="image/png")
-
-#Nicols Original While Function just in case
-
-"""
-    while condition == False:
-        if a_pred <= alpha_fakeness:
-            new_im = generate_image(alpha)
-            initial_image = image_numpy_mixer(initial_image, new_im, strength)
-            iter += 1
-
-        if b_pred <= beta_fakeness:
-            new_im = generate_image(beta)
-            initial_image = image_numpy_mixer(initial_image, new_im, strength)
-            iter += 1
-
-        if condition == True:
-            break
-
-        if iter == max_iter:
-            break
-"""
+    #im = cv2.imencode('.png', resized_img)[1]
+    #initial_image = color_under_image(color, initial_image)
+    #resized_img = (cv2.resize(initial_image, (28, 28), interpolation=cv2.INTER_AREA)*127.5+127.5).astype(np.uint16)
+    #image = Image.fromarray(resized_img)
+    #success, encoded_image = cv2.imencode('.png', gans[0,:,:,0])
+    #if success:g
+    #image = encoded_image.tobytes()
+    #bytes_image = io.BytesIO()
