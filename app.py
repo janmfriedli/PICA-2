@@ -1,4 +1,11 @@
 import streamlit as st
+import requests
+from PIL import Image
+import io
+import matplotlib.pylab as plt
+import cv2
+import numpy as np
+
 
 st.set_page_config(layout="centered", page_icon="🎨", page_title="PICA-2 AI ART")
 
@@ -10,20 +17,58 @@ st.write(
 
 left,right = st.columns(2)
 
+
+
+
+
 left.write("Fill in the data:")
 form = left.form("template_form")
+
+name = st.text_input('What is your name?')
+
 color = form.multiselect(
-        'Select a Color',
-        ['Green', 'Yellow', 'Red', 'Blue'],)
+        'Select a Style',
+        ['prism_r','hot','Paired','Set1', 'flag','gist_ncar','seismic','gray_r', 'coolwarm','viridis'],max_selections = 1)
+
 image1 = form.multiselect(
         'Select your Categories',
-        ['Apple', 'Eiffel Tower', 'Fish', 'Squirrel', 'House'],)
+        ['apple', 'mountain', 'cloud', 'butterfly', 'house', 'door'],max_selections = 2 )
+
+#query = {"color": , "alpha": , "beta": }
+right.write("Heres your generated image:")
+if form.form_submit_button("Generate Image"):
+    alpha = image1[0]
+    beta = image1[1]
+    color = color[0]
+    name = name
+
+    data = {"alpha": alpha, "beta": beta, "color": color, "name":name}
+    url = f"http://127.0.0.1:8000/super?alpha={alpha}&beta={beta}&color={color}&name={name}&noise_dim=100&num_examples=1"
+    #right.write("Heres your generated image:")
+
+    response = requests.post(url)
 
 
-generate = form.form_submit_button("Generate Image")
+    #image = Image.open(io.BytesIO(response.content)) #Nicole's original
+    #right.image(image, width = 300) #Nicole's original
 
-right.write("Here's your generated image!:")
-right.image("pica2 logo.png", width=300) # image will be here with api call
+    #st.image(Image.open("/Users/ds_janf/code/janmfriedli/PICA-2/PICA-2/api/one.png"))
+    output = response.content #NEW
+    st.markdown("HERE")
+    st.markdown(response.status_code)
+    if response.status_code == 200:
+        img = np.frombuffer(output , np.uint8)
+        img = cv2.imdecode(img , cv2.IMREAD_UNCHANGED)
+        st.image(img, width = 300)
+    elif response.status_code == 429:
+        st.warning("Hey slow down there!")
+    else:
+        st.warning("Something went terribly wrong.")
+        st.warning("Please wait before trying again.")
+
+    #plt.imshow(im) #NEW
+    #plt.axis('off') #NEW
+
 
 
 def add_bg_from_url():
@@ -35,6 +80,11 @@ def add_bg_from_url():
              background-attachment: fixed;
              background-size: cover
          }}
+
+         [data-testid="stHeader"] {{
+            background-color: #00d4ff00
+         }}
+
          </style>
          """,
          unsafe_allow_html=True
