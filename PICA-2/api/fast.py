@@ -250,6 +250,9 @@ async def get_super(request : Request ,
         if condition == True:
             break
 
+        if iter == max_iter:
+            break
+
     print(type(initial_image))
     print(initial_image.shape)
 
