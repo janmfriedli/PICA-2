@@ -1,8 +1,5 @@
 import streamlit as st
 import requests
-from PIL import Image
-import io
-import matplotlib.pylab as plt
 import cv2
 import numpy as np
 import sys
