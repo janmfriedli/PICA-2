@@ -4,14 +4,13 @@ import numpy as np
 from tensorflow.train import latest_checkpoint , Checkpoint
 from tensorflow.random import normal
 from tensorflow.keras.optimizers.legacy import Adam
-from models import make_generator_model , make_discriminator_model
+from pica2.api.models import make_generator_model , make_discriminator_model
 import os
 import cv2
 import io
 from dataclasses import dataclass , field
 import logging
 from PIL import Image
-from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 from datetime import date
 from slowapi.errors import RateLimitExceeded
@@ -154,16 +153,9 @@ def resize_color_signed(img,cmap,name, x=400,x1=0,y=450,y1=450):
     plt.imshow(image,cmap=cmap)
     plt.axis('off')
     plt.savefig('one.png', bbox_inches = 'tight')
+    plt.close()
     image = plt.imread('one.png')
     return image
-
-
-def blurr_image(img1):
-    #takes in image array, gives out image array that is blurred
-    flattened_image = img1.reshape(784,1)
-    blurred = gaussian_filter(flattened_image,sigma=7)
-    output = blurred.reshape(28,28,1)
-    return output
 
 
 def image_numpy_mixer(img1, img2, strength):
