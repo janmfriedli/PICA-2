@@ -1,7 +1,5 @@
 streamlit
 requests
-ffmpeg libsm6 libxext6
-libgl1-mesa-dev
-cv2
+opencv-python
 numpy
 sys
