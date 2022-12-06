@@ -55,7 +55,7 @@ def load_checkpoint(category : str):
 
 @app.on_event("startup")
 async def startup_event():
-    app.state.categories = ["house","apple","mountain","squirrel","door","cloud", "butterfly"]
+    app.state.categories = ["house","apple","mountain","squirrel","door","cloud", "butterfly","smiley"]
     app.state.checkpoints = dict()
     for cat in app.state.categories:
         app.state.checkpoints.update({cat : load_checkpoint(cat)})
