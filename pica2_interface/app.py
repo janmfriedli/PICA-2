@@ -5,11 +5,12 @@ import io
 import matplotlib.pylab as plt
 import cv2
 import numpy as np
+import sys
 
 
-st.set_page_config(layout="centered", page_icon="🎨", page_title="PICA-2 AI ART")
+st.set_page_config(layout="centered", page_title="PICA-2 AI ART")
 
-st.title("🎨 PICA-2")
+st.title("PICA-2")
 
 
 st.write(
@@ -24,7 +25,7 @@ left,right = st.columns(2)
 left.write("Fill in the data:")
 form = left.form("template_form")
 
-name = st.text_input('What is your name?')
+
 
 color = form.multiselect(
         'Select a Style',
@@ -34,13 +35,21 @@ image1 = form.multiselect(
         'Select your Categories',
         ['apple', 'mountain', 'cloud', 'butterfly', 'house', 'door'],max_selections = 2 )
 
+name = form.text_input('What is your name?')
+
+
+
 #query = {"color": , "alpha": , "beta": }
-right.write("Heres your generated image:")
+right.write("Here is your generated image:")
 if form.form_submit_button("Generate Image"):
-    alpha = image1[0]
-    beta = image1[1]
-    color = color[0]
-    name = name
+    if len(name) > 8:
+        form.error("You can't use more than 8 characters")
+        sys.exit()
+    else:
+        alpha = image1[0]
+        beta = image1[1]
+        color = color[0]
+        name = name
 
     data = {"alpha": alpha, "beta": beta, "color": color, "name":name}
     url = f"http://127.0.0.1:8000/super?alpha={alpha}&beta={beta}&color={color}&name={name}&noise_dim=100&num_examples=1"
@@ -54,12 +63,11 @@ if form.form_submit_button("Generate Image"):
 
     #st.image(Image.open("/Users/ds_janf/code/janmfriedli/PICA-2/PICA-2/api/one.png"))
     output = response.content #NEW
-    st.markdown("HERE")
-    st.markdown(response.status_code)
+    #st.markdown(response.status_code)
     if response.status_code == 200:
         img = np.frombuffer(output , np.uint8)
         img = cv2.imdecode(img , cv2.IMREAD_UNCHANGED)
-        st.image(img, width = 300)
+        right.image(img, width = 300)
     elif response.status_code == 429:
         st.warning("Hey slow down there!")
     else:
@@ -90,4 +98,4 @@ def add_bg_from_url():
          unsafe_allow_html=True
      ) # background (to be changed)
 
-add_bg_from_url()
+#add_bg_from_url()
