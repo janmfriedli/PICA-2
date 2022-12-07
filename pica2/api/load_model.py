@@ -7,7 +7,7 @@ import os
 names = ["house","apple","squirrel","mountain","door","cloud","butterfly","smiley"]
 
 central_dir = "central_models"
-if not os.path.isdir(central_dir):
+if not os.path.isdir( os.path.dirname(__file__) , central_dir):
     os.mkdir(central_dir)
 
 client = storage.Client()
