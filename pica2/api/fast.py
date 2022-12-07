@@ -13,16 +13,16 @@ import logging
 from PIL import Image
 import matplotlib.pyplot as plt
 from datetime import date
-from slowapi.errors import RateLimitExceeded
-from slowapi import Limiter , _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+#from slowapi.errors import RateLimitExceeded
+#from slowapi import Limiter , _rate_limit_exceeded_handler
+#from slowapi.util import get_remote_address
 
 
 ###API TITEL
 app = FastAPI(title = "PICA2 AMAZING GANs")
-limiter = Limiter(key_func = get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded , _rate_limit_exceeded_handler)
+#limiter = Limiter(key_func = get_remote_address)
+#app.state.limiter = limiter
+#app.add_exception_handler(RateLimitExceeded , _rate_limit_exceeded_handler)
 
 @dataclass
 class GanConfig:
@@ -38,7 +38,7 @@ async def shutdown_event():
     logging.info("Goodbye!")
 
 def load_checkpoint(category : str):
-    checkpoint_dir = os.path.join("central_models",category)
+    checkpoint_dir = os.path.join( os.path.dirname(__file__) , "central_models", category)
     latest = latest_checkpoint( os.path.join(checkpoint_dir , "training_checkpoints"))
     generator = make_generator_model()
     discriminator = make_discriminator_model()
@@ -94,7 +94,6 @@ async def get_ganification(category : str = "apple" , noise_dim : int = 100 , nu
     return Response(content = bytes_image.getvalue() , media_type="image/png")
 
 @app.post("/discriminate")
-@limiter.limit("5/10seconds")
 async def get_discriminated(request : Request , image : UploadFile , category : str = "apple"):
     if category not in app.state.checkpoints.keys():
         return {"Error": "Invalid Category"}
@@ -190,7 +189,6 @@ def discriminate_image(category : str , img : np.ndarray) -> np.ndarray:
     return prediction
 
 @app.post("/super" , response_class = Response)
-@limiter.limit("5/minute")
 async def get_super(request : Request ,
                     alpha: str ,
                     beta : str,
