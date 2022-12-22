@@ -1,6 +1,6 @@
 # PICA-2 => Abstract AI Art via Computational Creativity
 
-Context Pitch: 
+Watch this for context: 
 https://www.youtube.com/watch?v=57Qkq5qcktk
 
 ***
