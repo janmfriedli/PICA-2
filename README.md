@@ -4,7 +4,8 @@ Context Pitch:
 https://www.youtube.com/watch?v=57Qkq5qcktk
 
 ***
-What is the goal? We wanted to explore to what degree a model can be trained to create unique Picasso-Style Art Paintings. 
+What is the objective?
+Create unique Picasso-Style Art Paintings through an algorithm that is designed to be creative. 
 
 
 How is it done? We are using Deep Convolutional Generative Adversarial Network (DCGAN). The code is written using the Keras Sequential API with a tf.GradientTape training loop. It leverages the Google Quickdraw Dataset, widely known as the world's biggest sketch data repository. 
